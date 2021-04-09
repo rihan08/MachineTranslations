@@ -39,18 +39,19 @@ def tokenize_en(text):
     """
     return [tok.text for tok in spacy_en.tokenizer(text)]
 
-SRC = Field(tokenize = tokenize_de, 
+SRC = Field(tokenize = tokenize_en, 
+            init_token = '<sos>', 
+            eos_token = '<eos>', 
+            lower = True,
+            include_lengths = True)
+
+TRG = Field(tokenize = tokenize_de, 
             init_token = '<sos>', 
             eos_token = '<eos>', 
             lower = True, 
-            include_lengths = True)
+            )
 
-TRG = Field(tokenize = tokenize_en, 
-            init_token = '<sos>', 
-            eos_token = '<eos>', 
-            lower = True)
-
-train_data, valid_data, test_data = Multi30k.splits(exts = ('.de', '.en'), 
+train_data, valid_data, test_data = Multi30k.splits(exts = ('.en','.de'), 
                                                     fields = (SRC, TRG))
 
 
@@ -166,7 +167,7 @@ class Decoder(nn.Module):
         
         self.embedding = nn.Embedding(output_dim, emb_dim)
         
-        self.rnn = nn.GRU((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
+        self.rnn = nn.RNN((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
         
         self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim)
         
@@ -207,11 +208,11 @@ class Decoder(nn.Module):
         
         #weighted = [1, batch size, enc hid dim * 2]
         
-        rnn_input = torch.cat((embedded, weighted), dim = 2)
+        output = torch.cat((embedded, weighted), dim = 2)
         
         #rnn_input = [1, batch size, (enc hid dim * 2) + emb dim]
             
-        output, hidden = self.rnn(rnn_input, hidden.unsqueeze(0))
+        output, hidden = self.rnn(output, hidden.unsqueeze(0))
         
         #output = [seq len, batch size, dec hid dim * n directions]
         #hidden = [n layers * n directions, batch size, dec hid dim]
@@ -271,8 +272,15 @@ class Seq2Seq(nn.Module):
         mask = self.create_mask(src)
 
         #mask = [batch size, src len]
+
+        final_outputs = bptt(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,input,trg)
                 
-        for t in range(1, trg_len):
+            
+        return final_outputs
+
+
+def bptt(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,input,trg):
+    for t in range(1, trg_len):
             
             #insert input token embedding, previous hidden state, all encoder hidden states 
             #  and mask
@@ -291,9 +299,7 @@ class Seq2Seq(nn.Module):
             #if teacher forcing, use actual next token as next input
             #if not, use predicted token
             input = trg[t] if teacher_force else top1
-            
-        return outputs
-
+    return outputs
 
 INPUT_DIM = len(SRC.vocab)
 OUTPUT_DIM = len(TRG.vocab)
@@ -449,7 +455,7 @@ def translate_sentence(sentence, src_field, trg_field, model, device, max_len = 
     model.eval()
         
     if isinstance(sentence, str):
-        nlp = spacy.load('de')
+        nlp = spacy.load('en')
         tokens = [token.text.lower() for token in nlp(sentence)]
     else:
         tokens = [token.lower() for token in sentence]
