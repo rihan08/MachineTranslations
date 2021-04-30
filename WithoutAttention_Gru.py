@@ -206,7 +206,7 @@ DEC_EMB_DIM = 256
 HID_DIM = 512
 N_LAYERS = 2
 ENC_DROPOUT = 0.5
-DEC_DROPOUT = 0.5
+DEC_DROPOUT = 0.0
 
 enc = Encoder(INPUT_DIM, ENC_EMB_DIM, HID_DIM, N_LAYERS, ENC_DROPOUT)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS, DEC_DROPOUT)
@@ -312,7 +312,7 @@ def epoch_time(start_time, end_time):
     return elapsed_mins, elapsed_secs
 
 
-N_EPOCHS = 10
+N_EPOCHS = 3
 CLIP = 1
 
 best_valid_loss = float('inf')

@@ -233,6 +233,81 @@ class Decoder(nn.Module):
         
         return prediction, hidden.squeeze(0), a.squeeze(1)
 
+class FpiDecoder(nn.Module):
+    def __init__(self, output_dim, emb_dim, enc_hid_dim, dec_hid_dim, dropout, attention):
+        super().__init__()
+
+        self.output_dim = output_dim
+        self.attention = attention
+        
+        self.embedding = nn.Embedding(output_dim, emb_dim)
+        
+        self.rnn = nn.RNN((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
+        
+        self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim)
+        
+        self.dropout = nn.Dropout(dropout)
+        
+    def forward(self, input, hidden, encoder_outputs, mask):
+             
+        #input = [batch size]
+        #hidden = [batch size, dec hid dim]
+        #encoder_outputs = [src len, batch size, enc hid dim * 2]
+        #mask = [batch size, src len]
+        
+        input = input.unsqueeze(0)
+        
+        #input = [1, batch size]
+        
+        embedded = self.dropout(self.embedding(input))
+        
+        #embedded = [1, batch size, emb dim]
+        
+        a = self.attention(hidden, encoder_outputs, mask)
+                
+        #a = [batch size, src len]
+        
+        a = a.unsqueeze(1)
+        
+        #a = [batch size, 1, src len]
+        
+        encoder_outputs = encoder_outputs.permute(1, 0, 2)
+        
+        #encoder_outputs = [batch size, src len, enc hid dim * 2]
+        
+        weighted = torch.bmm(a, encoder_outputs)
+        
+        #weighted = [batch size, 1, enc hid dim * 2]
+        
+        weighted = weighted.permute(1, 0, 2)
+        
+        #weighted = [1, batch size, enc hid dim * 2]
+        
+        output = torch.cat((embedded, weighted), dim = 2)
+        
+        #rnn_input = [1, batch size, (enc hid dim * 2) + emb dim]
+            
+        output, hidden = self.rnn(output, hidden.unsqueeze(0))
+        
+        #output = [seq len, batch size, dec hid dim * n directions]
+        #hidden = [n layers * n directions, batch size, dec hid dim]
+        
+        #seq len, n layers and n directions will always be 1 in this decoder, therefore:
+        #output = [1, batch size, dec hid dim]
+        #hidden = [1, batch size, dec hid dim]
+        #this also means that output == hidden
+        assert (output == hidden).all()
+        
+        embedded = embedded.squeeze(0)
+        output = output.squeeze(0)
+        weighted = weighted.squeeze(0)
+        
+        prediction = self.fc_out(torch.cat((output, weighted, embedded), dim = 1))
+        
+        #prediction = [batch size, output dim]
+        
+        return prediction, hidden.squeeze(0), a.squeeze(1)
+
 
 class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, src_pad_idx, device):
@@ -247,7 +322,7 @@ class Seq2Seq(nn.Module):
         mask = (src != self.src_pad_idx).permute(1, 0)
         return mask
         
-    def forward(self, src, src_len, trg, teacher_forcing_ratio = 0.5):
+    def forward(self, src, src_len, trg, teacher_forcing_ratio = 1.0):
         
         #src = [src len, batch size]
         #src_len = [batch size]
@@ -269,7 +344,7 @@ class Seq2Seq(nn.Module):
         #first input to the decoder is the <sos> tokens
         input = trg[0,:]
 
-        print(self.decoder.output_dim)
+
         
         mask = self.create_mask(src)
 
@@ -280,10 +355,25 @@ class Seq2Seq(nn.Module):
             
         return final_outputs
 
+input_array = []
+
+for t in range(1, 17):
+            input_array.append(torch.tensor([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2]))
+
+print(input_array)
+
+
+
 
 def bptt(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,input,trg):
     for t in range(1, trg_len):
             
+
             #insert input token embedding, previous hidden state, all encoder hidden states 
             #  and mask
             #receive output tensor (predictions) and new hidden state
@@ -309,6 +399,8 @@ def fpi(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,i
             #insert input token embedding, previous hidden state, all encoder hidden states 
             #  and mask
             #receive output tensor (predictions) and new hidden state
+
+
             output, hidden, _ = self.decoder(input, hidden, encoder_outputs, mask)
             
             #place predictions in a tensor holding predictions for each token
@@ -332,7 +424,7 @@ DEC_EMB_DIM = 256
 ENC_HID_DIM = 512
 DEC_HID_DIM = 512
 ENC_DROPOUT = 0.5
-DEC_DROPOUT = 0.5
+DEC_DROPOUT = 0.0
 SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
 attn = Attention(ENC_HID_DIM, DEC_HID_DIM)
@@ -442,7 +534,7 @@ def epoch_time(start_time, end_time):
     return elapsed_mins, elapsed_secs
 
 
-N_EPOCHS = 10
+N_EPOCHS = 15
 CLIP = 1
 
 best_valid_loss = float('inf')
