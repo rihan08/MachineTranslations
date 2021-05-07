@@ -149,6 +149,8 @@ class Decoder(nn.Module):
         input = intput_matrix
 
 
+        print(hidden.size())
+
         
         #input = [1, batch size]
         
