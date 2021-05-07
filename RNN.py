@@ -170,7 +170,7 @@ class Decoder(nn.Module):
         
         self.rnn = nn.RNN((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
         
-        self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim)
+        self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim) #1792x7853
         
         self.dropout = nn.Dropout(dropout)
         
@@ -306,7 +306,7 @@ class Decoder(nn.Module):
 
         final_matrix = soft(u_sum_matrix)
 
-        #pred = self.fc_out(final_matrix.squeeze(0))
+        pred = self.fc_out(final_matrix)
 
         ####################
 
@@ -358,14 +358,12 @@ class Decoder(nn.Module):
         #this also means that output == hidden
         assert (output == hidden).all()
         
-        print(output.size())
-        print(weighted.size())
-        print(embedded.size())
 
-        embedded = embedded.squeeze(0)
-        output = output.squeeze(0)
-        weighted = weighted.squeeze(0) 
-
+        embedded = embedded.squeeze(0) # torch.Size([128, 256])
+        output = output.squeeze(0) #torch.Size([128, 512])
+        weighted = weighted.squeeze(0) #torch.Size([128, 1024])
+ 
+        #print(torch.cat((output, weighted, embedded), dim = 1).size()) #torch.Size([128, 1792])
 
         
         prediction = self.fc_out(torch.cat((output, weighted, embedded), dim = 1))
