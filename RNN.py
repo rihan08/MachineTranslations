@@ -165,10 +165,17 @@ class Decoder(nn.Module):
 
         self.output_dim = output_dim
         self.attention = attention
+        print(output_dim, emb_dim)
         
         self.embedding = nn.Embedding(output_dim, emb_dim)
         
         self.rnn = nn.RNN((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
+
+        self.W = nn.Linear(256, 512)
+
+        self.V = nn.Linear(512, 512)
+
+        self.U = nn.Linear(512, 7853)
         
         self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim) #1792x7853
         
@@ -207,40 +214,39 @@ class Decoder(nn.Module):
                                 cv,
                                  ])
 
+        
+
         max_matrix = intput_matrix.max(dim =2)[0]
 
-        # print(max_matrix)
 
-        # print(max_matrix.size())
+        print(max_matrix.size())
+
 
         new_embedded = self.dropout(self.embedding(max_matrix))
+
         
+
             
         w_y_matrix = torch.tensor([      
-                                torch.zeros(128,256).detach().numpy(),
-                                new_embedded.detach().numpy()[0]*0.6,
-                                new_embedded.detach().numpy()[1]*0.6,
-                                new_embedded.detach().numpy()[2]*0.6,
-                                new_embedded.detach().numpy()[3]*0.6,
-                                new_embedded.detach().numpy()[4]*0.6,
-                                new_embedded.detach().numpy()[5]*0.6,
-                                new_embedded.detach().numpy()[6]*0.6,
-                                new_embedded.detach().numpy()[7]*0.6,
-                                new_embedded.detach().numpy()[8]*0.6,
-                                new_embedded.detach().numpy()[9]*0.6,
-                                new_embedded.detach().numpy()[10]*0.6,
-                                new_embedded.detach().numpy()[11]*0.6,
-                                new_embedded.detach().numpy()[12]*0.6,
-                                new_embedded.detach().numpy()[13]*0.6,
-                                new_embedded.detach().numpy()[14]*0.6,                            
+                                torch.zeros(128,512).detach().numpy(),
+                                self.W(new_embedded[0]).detach().numpy(),
+                                self.W(new_embedded[1]).detach().numpy(),
+                                self.W(new_embedded[2]).detach().numpy(),
+                                self.W(new_embedded[3]).detach().numpy(),
+                                self.W(new_embedded[4]).detach().numpy(),
+                                self.W(new_embedded[5]).detach().numpy(),
+                                self.W(new_embedded[6]).detach().numpy(),
+                                self.W(new_embedded[7]).detach().numpy(),
+                                self.W(new_embedded[8]).detach().numpy(),
+                                self.W(new_embedded[9]).detach().numpy(),
+                                self.W(new_embedded[10]).detach().numpy(),
+                                self.W(new_embedded[11]).detach().numpy(),
+                                self.W(new_embedded[12]).detach().numpy(),
+                                self.W(new_embedded[13]).detach().numpy(),
+                                self.W(new_embedded[14]).detach().numpy(),                            
                                  ])
         
         
-
-        
-        matrix_512 = torch.ones(512, 256)
-
-        x_matrix = torch.matmul(hidden, matrix_512)
 
         
         const_w = 0.4
@@ -249,23 +255,25 @@ class Decoder(nn.Module):
 
 
         v_sum_matrix = torch.tensor([      
-                                torch.zeros(128,256).detach().numpy(),
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
-                                x_matrix.detach().numpy()+const_w+const_v,
+                                torch.zeros(128,512).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
+                                self.V(hidden).detach().numpy(),
                                  ])
+
+        print(v_sum_matrix.size())
 
         h1 = w_y_matrix + v_sum_matrix
 
@@ -273,40 +281,34 @@ class Decoder(nn.Module):
 
         sig_matrix = torch.sigmoid(h1)
 
+        soft = nn.Softmax(dim=1)
 
-
-        matrix_7853 = torch.ones(256, 7853)
-        u_sig_matrix = torch.matmul(sig_matrix, matrix_7853)
-
-
-    
 
 
         u_sum_matrix = torch.tensor([      
                                 torch.zeros(128,7853).detach().numpy(),
-                                u_sig_matrix.detach().numpy()[1],
-                                u_sig_matrix.detach().numpy()[2],
-                                u_sig_matrix.detach().numpy()[3],
-                                u_sig_matrix.detach().numpy()[4],
-                                u_sig_matrix.detach().numpy()[5],
-                                u_sig_matrix.detach().numpy()[6],
-                                u_sig_matrix.detach().numpy()[7],
-                                u_sig_matrix.detach().numpy()[8],
-                                u_sig_matrix.detach().numpy()[9],
-                                u_sig_matrix.detach().numpy()[10],
-                                u_sig_matrix.detach().numpy()[11],
-                                u_sig_matrix.detach().numpy()[12],
-                                u_sig_matrix.detach().numpy()[13],
-                                u_sig_matrix.detach().numpy()[14],
-                                u_sig_matrix.detach().numpy()[15],                        
+                                soft(self.U(sig_matrix[0])).detach().numpy(),
+                                soft(self.U(sig_matrix[1])).detach().numpy(),
+                                soft(self.U(sig_matrix[2])).detach().numpy(),
+                                soft(self.U(sig_matrix[3])).detach().numpy(),
+                                soft(self.U(sig_matrix[4])).detach().numpy(),
+                                soft(self.U(sig_matrix[5])).detach().numpy(),
+                                soft(self.U(sig_matrix[6])).detach().numpy(),
+                                soft(self.U(sig_matrix[7])).detach().numpy(),
+                                soft(self.U(sig_matrix[8])).detach().numpy(),
+                                soft(self.U(sig_matrix[9])).detach().numpy(),
+                                soft(self.U(sig_matrix[10])).detach().numpy(),
+                                soft(self.U(sig_matrix[11])).detach().numpy(),
+                                soft(self.U(sig_matrix[12])).detach().numpy(),
+                                soft(self.U(sig_matrix[13])).detach().numpy(),
+                                soft(self.U(sig_matrix[14])).detach().numpy(),                
                                  ])
 
-
-        soft = nn.Softmax(dim=1)
-
-        final_matrix = soft(u_sum_matrix)
-
-        pred = self.fc_out(final_matrix)
+        
+        
+        
+        
+        print(u_sum_matrix.size()) # torch.Size([16, 128, 7853])
 
         ####################
 
@@ -348,6 +350,7 @@ class Decoder(nn.Module):
         #rnn_input = [1, batch size, (enc hid dim * 2) + emb dim]
             
         output, hidden = self.rnn(output, hidden.unsqueeze(0))
+
         
         #output = [seq len, batch size, dec hid dim * n directions]
         #hidden = [n layers * n directions, batch size, dec hid dim]
@@ -370,83 +373,12 @@ class Decoder(nn.Module):
         
         #prediction = [batch size, output dim]
         
-        return prediction, hidden.squeeze(0), a.squeeze(1)
+        #return prediction, hidden.squeeze(0), a.squeeze(1)
 
-class FpiDecoder(nn.Module):
-    def __init__(self, output_dim, emb_dim, enc_hid_dim, dec_hid_dim, dropout, attention):
-        super().__init__()
+        # Need to change prediction to usum matrix torch.Size([16, 128, 7853])
 
-        self.output_dim = output_dim
-        self.attention = attention
-        
-        self.embedding = nn.Embedding(output_dim, emb_dim)
-        
-        self.rnn = nn.RNN((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
-        
-        self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim)
-        
-        self.dropout = nn.Dropout(dropout)
-        
-    def forward(self, input, hidden, encoder_outputs, mask):
-             
-        #input = [batch size]
-        #hidden = [batch size, dec hid dim]
-        #encoder_outputs = [src len, batch size, enc hid dim * 2]
-        #mask = [batch size, src len]
-        
-        input = input.unsqueeze(0)
+        return prediction, hidden.squeeze(0), a.squeeze(1), 
 
-        
-        #input = [1, batch size]
-        
-        embedded = self.dropout(self.embedding(input))
-        
-        #embedded = [1, batch size, emb dim]
-        
-        #a = self.attention(hidden, encoder_outputs, mask)
-                
-        #a = [batch size, src len]
-        
-        #a = a.unsqueeze(1)
-        
-        #a = [batch size, 1, src len]
-        
-        #encoder_outputs = encoder_outputs.permute(1, 0, 2)
-        
-        #encoder_outputs = [batch size, src len, enc hid dim * 2]
-        
-        #weighted = torch.bmm(a, encoder_outputs)
-        
-        #weighted = [batch size, 1, enc hid dim * 2]
-        
-        #weighted = weighted.permute(1, 0, 2)
-        
-        #weighted = [1, batch size, enc hid dim * 2]
-        
-        #output = torch.cat((embedded, weighted), dim = 2)
-        
-        #rnn_input = [1, batch size, (enc hid dim * 2) + emb dim]
-            
-        output, hidden = self.rnn(embedded, hidden.unsqueeze(0))
-        
-        #output = [seq len, batch size, dec hid dim * n directions]
-        #hidden = [n layers * n directions, batch size, dec hid dim]
-        
-        #seq len, n layers and n directions will always be 1 in this decoder, therefore:
-        #output = [1, batch size, dec hid dim]
-        #hidden = [1, batch size, dec hid dim]
-        #this also means that output == hidden
-        assert (output == hidden).all()
-        
-        embedded = embedded.squeeze(0)
-        output = output.squeeze(0)
-        weighted = weighted.squeeze(0)
-        
-        prediction = self.fc_out(torch.cat((output, weighted, embedded), dim = 1))
-        
-        #prediction = [batch size, output dim]
-        
-        return prediction, hidden.squeeze(0), a.squeeze(1)
 
 
 class Seq2Seq(nn.Module):
@@ -491,8 +423,6 @@ class Seq2Seq(nn.Module):
         # print(a)
         
 
-         
-
         mask = self.create_mask(src)
 
         # print(z.size())
@@ -514,7 +444,7 @@ def bptt(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,
             #insert input token embedding, previous hidden state, all encoder hidden states 
             #  and mask
             #receive output tensor (predictions) and new hidden state
-            output, hidden, _ = self.decoder(input, hidden, encoder_outputs, mask)
+            output, hidden, _,  = self.decoder(input, hidden, encoder_outputs, mask)
             
             #place predictions in a tensor holding predictions for each token
             outputs[t] = output
@@ -530,29 +460,7 @@ def bptt(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,
             input = trg[t] if teacher_force else top1
     return outputs
 
-def fpi(self,trg_len,hidden,outputs,encoder_outputs,mask,teacher_forcing_ratio,input,trg):
-    for t in range(1, trg_len):
-            
-            #insert input token embedding, previous hidden state, all encoder hidden states 
-            #  and mask
-            #receive output tensor (predictions) and new hidden state
 
-
-            output, hidden, _ = self.decoder(input, hidden, encoder_outputs, mask)
-            
-            #place predictions in a tensor holding predictions for each token
-            outputs[t] = output
-            
-            #decide if we are going to use teacher forcing or not
-            teacher_force = random.random() < teacher_forcing_ratio
-            
-            #get the highest predicted token from our predictions
-            top1 = output.argmax(1) 
-            
-            #if teacher forcing, use actual next token as next input
-            #if not, use predicted token
-            input = trg[t] if teacher_force else top1
-    return outputs
 
 INPUT_DIM = len(SRC.vocab)
 OUTPUT_DIM = len(TRG.vocab)
