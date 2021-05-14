@@ -215,15 +215,21 @@ class Decoder(nn.Module):
                                  ])
 
         
-
+        argmax = torch.argmax(input_matrix,dim=2,keepdim=True)
         zero_input = torch.zeros(16,128,7853)
 
+        
+
         max_matrix = input_matrix.max(dim =2)[0]
+
+
 
         print('nnn',max_matrix.size())
         #print('mmm',self.embedding(fpi_matrix.max(dim =2)[0]))
 
-        new_embedded = self.dropout(self.embedding(input_matrix))
+
+
+        new_embedded = self.dropout(self.embedding(max_matrix))
 
         
 
